@@ -414,15 +414,16 @@ void ArucoTF::verifyCalibration(const int &marker_id) {
   }
   E /= error_big.size();
 
-  for(auto i: error_big){
-    C += (i-E) * (i-E);
+  ROS_INFO_STREAM("Sample Mean");
+  ROS_INFO_STREAM(E);
+
+  /*for(auto i: error_big){
+    C += (i-E) * (i-E).transpose();
   }
   C /= (error_big.size() - 1);
 
-  ROS_INFO_STREAM("Sample Mean");
-  ROS_INFO_STREAM(E);
   ROS_INFO_STREAM("Covariance");
-  ROS_INFO_STREAM(C);
+  ROS_INFO_STREAM(C);*/
 }
 
 int main(int argc, char **argv) {
