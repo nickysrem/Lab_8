@@ -381,7 +381,7 @@ void ArucoTF::verifyCalibration(const int &marker_id) {
     Eigen::Vector3f marker_trans;
     Eigen::Quaternionf marker_rot;
     ArucoTF::tf2TransformToEigen(tf_calibMarkerToWorld,marker_rot,marker_trans);
-    auto marker_rotation {marker_rot.toRotationMatrix().eulerAngles(0, 1, 2)};
+    //auto marker_rotation {marker_rot.toRotationMatrix().eulerAngles(0, 1, 2)};
     
 
     // Get tool0 TF using lookup_markerToWorld() function
@@ -393,11 +393,11 @@ void ArucoTF::verifyCalibration(const int &marker_id) {
     Eigen::Vector3f tool_trans;
     Eigen::Quaternionf tool_rot;
     ArucoTF::tf2TransformToEigen(tf_toolToWorld,tool_rot,tool_trans);
-    auto tool_rotation {tool_rot.toRotationMatrix().eulerAngles(0, 1, 2)};
+    //auto tool_rotation {tool_rot.toRotationMatrix().eulerAngles(0, 1, 2)};
 
     // Calculate the 7 dimensional error (x,y,z,qx,qy,qz,qw) between the two
-    Eigen::VectorXf error_small(6);
-    error_small << (marker_trans - tool_trans),(marker_rotation - tool_rotation);
+    Eigen::VectorXf error_small {Eigen::VectorXf::Zero(7)};
+    error_small << (tool_trans - marker_trans),(tool_rot.coeffs() - marker_rot.coeffs());
 
     error_big.push_back(error_small);
 
@@ -406,45 +406,24 @@ void ArucoTF::verifyCalibration(const int &marker_id) {
   ROS_INFO_ONCE("Verification samples gathered");
 
   // Once the errors are gathered, calculate sample mean vector and sample covariance matrix
-  Eigen::VectorXf E;
-  Eigen::VectorXf C;
-  int i;
-  for(i = 0; i < 15; i++){
-    E(0) += error_big(i,0);
-    E(1) += error_big(i,1);
-    E(2) += error_big(i,2);
-    E(3) += error_big(i,3);
-    E(4) += error_big(i,4);
-    E(5) += error_big(i,5);
-  }
-  E(0) = (1/15) * E(0);
-  E(1) = (1/15) * E(1);
-  E(2) = (1/15) * E(2);
-  E(3) = (1/15) * E(3);
-  E(4) = (1/15) * E(4);
-  E(5) = (1/15) * E(5);
+  Eigen::VectorXf E {Eigen::VectorXf::Zero(7)};
+  Eigen::VectorXf C {Eigen::VectorXf::Zero(7)};
 
-  for(i = 0; i < 15; i++){
-    C(0) += (error_big(i,0)-E(0))^2;
-    C(1) += (error_big(i,1)-E(1))^2;
-    C(2) += (error_big(i,2)-E(2))^2;
-    C(3) += (error_big(i,3)-E(3))^2;
-    C(4) += (error_big(i,4)-E(4))^2;
-    C(5) += (error_big(i,5)-E(5))^2;
+  for (auto i: error_big){
+    E += i;
   }
-  C(0) = (1/14) * C(0);
-  C(1) = (1/14) * C(1);
-  C(2) = (1/14) * C(2);
-  C(3) = (1/14) * C(3);
-  C(4) = (1/14) * C(4);
-  C(5) = (1/14) * C(5);
+  E /= error_big.size();
+
+  for(auto i: error_big){
+    C += (i-E) * (i-E);
+  }
+  C /= (error_big.size() - 1);
+
   ROS_INFO_STREAM("Sample Mean");
   ROS_INFO_STREAM(E);
   ROS_INFO_STREAM("Covariance");
   ROS_INFO_STREAM(C);
 }
-
-
 
 int main(int argc, char **argv) {
   ros::init(argc, argv, "aruco_tf");
